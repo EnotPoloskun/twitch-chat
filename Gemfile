@@ -1,4 +1,5 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in twitch-chat.gemspec
+gem 'eventmachine', '~> 1.0.3'
+
 gemspec
