@@ -72,11 +72,27 @@ module Twitch
     private
 
       def unbind(arg = nil)
-        puts 'UNBIND'
+        puts 'UNBIND'.colorize(:red)
       end
 
       def receive_data(data)
-        puts data
+        data.split(/\r?\n/).each do |message|
+          puts message.colorize(:yellow)
+
+          Message.new(message).tap do |message|
+            case message.type
+              when :ping
+                send_data("PONG :tmi.twitch.tv")
+                trigger(:ping)
+              when :message
+                trigger(:message, message.user, message.message) if message.target == @channel
+              when :join, :part
+                trigger(message.type, message.user)
+              when :mode
+                trigger(:mode, *message.params.last(2))
+            end
+          end
+        end
       end
 
       def send_data(message)
