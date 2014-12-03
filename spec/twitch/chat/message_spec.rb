@@ -39,5 +39,28 @@ describe Twitch::Chat::Message do
         it { message.user.should eq 'twitchnotify' }
       end
     end
+
+    context 'MODE' do
+      let(:message) { Twitch::Chat::Message.new(":jtv MODE #enotpoloskun +o enotpoloskun") }
+
+      it { message.user.should eq nil }
+      it { message.type.should eq :mode }
+    end
+
+    context 'PING' do
+      let(:message) { Twitch::Chat::Message.new("PING :tmi.twitch.tv") }
+
+      it { message.user.should eq nil }
+      it { message.type.should eq :ping }
+    end
+
+    context 'NOTIFY' do
+      context :login_unsuccessful do
+        let(:message) { Twitch::Chat::Message.new(":tmi.twitch.tv NOTICE * :Login unsuccessful") }
+
+        it { message.user.should eq nil }
+        it { message.type.should eq :login_unsuccessful }
+      end
+    end
   end
 end
