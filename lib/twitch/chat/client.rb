@@ -72,7 +72,7 @@ module Twitch
     private
 
       def unbind(arg = nil)
-        puts 'UNBIND'.colorize(:red)
+        trigger(:disconnect)
       end
 
       def receive_data(data)
@@ -80,6 +80,8 @@ module Twitch
           puts message.colorize(:yellow)
 
           Message.new(message).tap do |message|
+            trigger(:raw, message)
+
             case message.type
               when :ping
                 send_data("PONG :tmi.twitch.tv")
@@ -90,6 +92,12 @@ module Twitch
                 trigger(message.type, message.user)
               when :mode
                 trigger(:mode, *message.params.last(2))
+              when :slow_mode, :r9k_mode, :subscribers_mode
+                trigger(message.type)
+              when :subscribe
+                trigger(:subscribe, message.params.split(' ').first)
+              when :not_supported
+                trigger(:not_supported, *message.params)
             end
           end
         end
@@ -113,6 +121,7 @@ module Twitch
       def authenticate
         send_data "PASS #{password}"
         send_data "NICK #{nickname}"
+        send_data "TWITCHCLIENT 3"
       end
     end
   end

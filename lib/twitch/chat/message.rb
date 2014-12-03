@@ -76,11 +76,29 @@ module Twitch
 
       def parse_type
         case @command
-          when 'PRIVMSG' then :message
+          when 'PRIVMSG'
+            if @user == 'jtv'
+              case @message
+                when /This room is now in slow mode/ then :slow_mode
+                when /This room is now in subscribers-only mode/ then :subscribers_mode
+                when /This room is now in r9k mode/ then :r9k_mode
+              end
+            elsif @user == 'twitchnotify'
+              if message =~ /just subscribed!/
+                :subscribe
+              end
+            else
+
+              :message
+            end
           when 'MODE' then :mode
           when 'PING' then :ping
           when 'JOIN' then :join
           when 'PART' then :part
+          when 'NOTICE'
+            if @params.last == 'Login unsuccessful'
+              :login_unsuccessful
+            end
           else :not_supported
         end
       end
