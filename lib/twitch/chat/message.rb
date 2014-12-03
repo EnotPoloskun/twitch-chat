@@ -88,13 +88,10 @@ module Twitch
                 :subscribe
               end
             else
-
               :message
             end
           when 'MODE' then :mode
           when 'PING' then :ping
-          when 'JOIN' then :join
-          when 'PART' then :part
           when 'NOTICE'
             if @params.last == 'Login unsuccessful'
               :login_unsuccessful

@@ -88,8 +88,6 @@ module Twitch
                 trigger(:ping)
               when :message
                 trigger(:message, message.user, message.message) if message.target == @channel
-              when :join, :part
-                trigger(message.type, message.user)
               when :mode
                 trigger(:mode, *message.params.last(2))
               when :slow_mode, :r9k_mode, :subscribers_mode
