@@ -73,6 +73,11 @@ module Twitch
         send_data "JOIN ##{channel}"
       end
 
+      def part(channel)
+        @channel = nil
+        send_data "PART ##{channel}"
+      end
+
       def ready
         @connected = true
         authenticate
