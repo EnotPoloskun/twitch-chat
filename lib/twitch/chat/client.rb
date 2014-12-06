@@ -2,7 +2,7 @@ module Twitch
   module Chat
     class Client
       attr_accessor :host, :port, :nickname, :password, :connection
-      attr_reader :channel
+      attr_reader :channel, :callbacks
 
       def initialize(options = {}, &blk)
         options.symbolize_keys!
