@@ -7,15 +7,15 @@ module Twitch
       def initialize(options = {}, &blk)
         options.symbolize_keys!
         options = {
-          :host =>     'irc.twitch.tv',
-          :port =>     '6667',
+          host: 'irc.twitch.tv',
+          port: '6667',
         }.merge!(options)
 
         @host = options[:host]
         @port = options[:port]
         @nickname = options[:nickname]
         @password = options[:password]
-        @channel = options[:channel]
+        @channel = Channel.new(options[:channel]) if options[:channel]
 
         @connected = false
         @callbacks = {}
@@ -28,6 +28,18 @@ module Twitch
           else
             instance_eval(&blk)
           end
+        end
+
+        self.on(:mode) do |command, user|
+          if command = '+o'
+            @channel.add_moderator(user)
+          else
+            @channel.remove_moderator(user)
+          end
+        end
+
+        self.on(:ping) do
+          send_data("PONG :tmi.twitch.tv")
         end
       end
 
@@ -57,7 +69,7 @@ module Twitch
       end
 
       def join(channel)
-        @channel = channel
+        @channel = Channel.new(channel)
         send_data "JOIN ##{channel}"
       end
 
@@ -84,16 +96,15 @@ module Twitch
 
             case message.type
               when :ping
-                send_data("PONG :tmi.twitch.tv")
                 trigger(:ping)
               when :message
-                trigger(:message, message.user, message.message) if message.target == @channel
+                trigger(:message, message.user, message.message) if message.target == @channel.name
               when :mode
                 trigger(:mode, *message.params.last(2))
               when :slow_mode, :r9k_mode, :subscribers_mode
                 trigger(message.type)
               when :subscribe
-                trigger(:subscribe, message.params.split(' ').first)
+                trigger(:subscribe, message.params.last.split(' ').first)
               when :not_supported
                 trigger(:not_supported, *message.params)
             end
