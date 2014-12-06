@@ -9,6 +9,5 @@ require 'twitch/chat/channel'
 
 module Twitch
   module Chat
-    # Your code goes here...
   end
 end

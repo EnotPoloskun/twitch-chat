@@ -78,6 +78,10 @@ module Twitch
         send_data "PART ##{channel}"
       end
 
+      def message(message)
+        "PRIVMSG ##{@channel.name} message"
+      end
+
       def ready
         @connected = true
         authenticate
