@@ -1,6 +1,6 @@
 # Twitch::Chat
 
-twitch-chat library is a Twitch chat client which uses Twitch IRC. EventMachine is used to handle connection to server. With the help of this library you can connect to any Twitch's channel and handle various chat events. Can be used as twitch chat bot engine.
+twitch-chat library is a Twitch chat client which uses [Twitch IRC](http://help.twitch.tv/customer/portal/articles/1302780-twitch-irc). EventMachine is used to handle connection to server. With the help of this library you can connect to any Twitch's channel and handle various chat events. Can be used as twitch chat bot engine.
 
 ## Installation
 
