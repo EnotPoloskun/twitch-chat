@@ -1,5 +1,5 @@
 require 'eventmachine'
-require 'colorize'
+require 'logger'
 require 'active_support/core_ext/hash/keys'
 require "twitch/chat/version"
 require 'twitch/chat/client'

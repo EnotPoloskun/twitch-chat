@@ -13,7 +13,10 @@ module Twitch
         options = {
           host: 'irc.twitch.tv',
           port: '6667',
+          output: STDOUT
         }.merge!(options)
+
+        @logger = Logger.new(options[:output]) if options[:output]
 
         @host = options[:host]
         @port = options[:port]
@@ -110,7 +113,10 @@ module Twitch
 
       def handle_message_queue
         EM.add_timer(message_delay) do
-          send_data "PRIVMSG ##{@channel.name} :#{@messages_queue.pop}"
+          if message = @messages_queue.pop
+            send_data "PRIVMSG ##{@channel.name} :#{message}"
+            @logger.debug("Sent message: PRIVMSG ##{@channel.name} :#{message}")
+          end
 
           handle_message_queue
         end
@@ -123,7 +129,7 @@ module Twitch
 
       def receive_data(data)
         data.split(/\r?\n/).each do |message|
-          puts message.colorize(:yellow)
+          @logger.debug(message)
 
           Message.new(message).tap do |message|
             trigger(:raw, message)
