@@ -82,6 +82,9 @@ module Twitch
                 when /This room is now in slow mode/ then :slow_mode
                 when /This room is now in subscribers-only mode/ then :subscribers_mode
                 when /This room is now in r9k mode/ then :r9k_mode
+                when /This room is no longer in slow mode/ then :slow_mode_off
+                when /This room is no longer in r9k mode/ then :r9k_mode_off
+                when /This room is no longer in subscribers-only mode/ then :subscribers_mode_off
               end
             elsif @user == 'twitchnotify'
               if message =~ /just subscribed!/

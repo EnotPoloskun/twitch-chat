@@ -70,22 +70,22 @@ module Twitch
 
       def join(channel)
         @channel = Channel.new(channel)
-        send_data "JOIN ##{channel}"
+        send_data "JOIN ##{@channel.name}"
       end
 
       def part(channel)
+        send_data "PART ##{@channel.name}"
         @channel = nil
-        send_data "PART ##{channel}"
       end
 
       def send_message(message)
-        "PRIVMSG ##{@channel.name} message"
+        send_data "PRIVMSG ##{@channel.name} :#{message}"
       end
 
       def ready
         @connected = true
         authenticate
-        join(channel) if @channel
+        join(@channel.name) if @channel
 
         trigger(:connected)
       end
@@ -110,7 +110,13 @@ module Twitch
                 trigger(:message, message.user, message.message) if message.target == @channel.name
               when :mode
                 trigger(:mode, *message.params.last(2))
-              when :slow_mode, :r9k_mode, :subscribers_mode
+
+                if message.params[1] == '+o'
+                  trigger(:new_moderator, message.params.last)
+                elsif message.params[1] == '-o'
+                  trigger(:remove_moderator, message.params.last)
+                end
+              when :slow_mode, :r9k_mode, :subscribers_mode, :slow_mode_off, :r9k_mode_off, :subscribers_mode_off
                 trigger(message.type)
               when :subscribe
                 trigger(:subscribe, message.params.last.split(' ').first)
