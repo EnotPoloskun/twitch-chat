@@ -8,9 +8,12 @@ Gem::Specification.new do |spec|
   spec.version       = Twitch::Chat::VERSION
   spec.authors       = ["Pavel Astraukh"]
   spec.email         = ["paladin111333@gmail.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
-  spec.homepage      = ""
+  spec.summary       = %q{twitch-chat is a Twitch chat client that uses Twitch IRC. Can be used as twitch chat bot engine.}
+  spec.description   = %q{twitch-chat library is a Twitch chat client that uses Twitch IRC.
+                        EventMachine is used to handle connections to servers.
+                        With the help of this library you can connect to any Twitch's channel and handle various chat events.
+                        Can be used as twitch chat bot engine.}
+  spec.homepage      = "https://github.com/EnotPoloskun/twitch-chat"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
