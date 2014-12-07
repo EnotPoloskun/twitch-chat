@@ -78,7 +78,7 @@ module Twitch
         send_data "PART ##{channel}"
       end
 
-      def message(message)
+      def send_message(message)
         "PRIVMSG ##{@channel.name} message"
       end
 
