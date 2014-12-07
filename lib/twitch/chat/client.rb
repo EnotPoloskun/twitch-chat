@@ -1,6 +1,10 @@
 module Twitch
   module Chat
     class Client
+      MODERATOR_MESSAGES_COUNT = 100
+      USER_MESSAGES_COUNT = 20
+      TWITCH_PERIOD = 30.0
+
       attr_accessor :host, :port, :nickname, :password, :connection
       attr_reader :channel, :callbacks
 
@@ -17,6 +21,8 @@ module Twitch
         @password = options[:password]
         @channel = Channel.new(options[:channel]) if options[:channel]
 
+        @messages_queue = []
+
         @connected = false
         @callbacks = {}
 
@@ -30,12 +36,12 @@ module Twitch
           end
         end
 
-        self.on(:mode) do |command, user|
-          if command = '+o'
-            @channel.add_moderator(user)
-          else
-            @channel.remove_moderator(user)
-          end
+        self.on(:new_moderator) do |user|
+          @channel.add_moderator(user)
+        end
+
+        self.on(:remove_moderator) do |user|
+          @channel.remove_moderator(user)
         end
 
         self.on(:ping) do
@@ -64,6 +70,7 @@ module Twitch
         EventMachine.run do
           trap("TERM") { EM::stop }
           trap("INT")  { EM::stop }
+          handle_message_queue
           connect
         end
       end
@@ -73,13 +80,14 @@ module Twitch
         send_data "JOIN ##{@channel.name}"
       end
 
-      def part(channel)
+      def part
         send_data "PART ##{@channel.name}"
         @channel = nil
+        @messages_queue = []
       end
 
       def send_message(message)
-        send_data "PRIVMSG ##{@channel.name} :#{message}"
+        @messages_queue << message if @messages_queue.last != message
       end
 
       def ready
@@ -90,9 +98,26 @@ module Twitch
         trigger(:connected)
       end
 
+      def max_messages_count
+        @channel.moderators.include?(@nickname) ? MODERATOR_MESSAGES_COUNT : USER_MESSAGES_COUNT
+      end
+
+      def message_delay
+        TWITCH_PERIOD / max_messages_count
+      end
+
     private
 
+      def handle_message_queue
+        EM.add_timer(message_delay) do
+          send_data "PRIVMSG ##{@channel.name} :#{@messages_queue.pop}"
+
+          handle_message_queue
+        end
+      end
+
       def unbind(arg = nil)
+        part if @channel
         trigger(:disconnect)
       end
 
