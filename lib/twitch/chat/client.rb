@@ -22,7 +22,7 @@ module Twitch
         @port = options[:port]
         @nickname = options[:nickname]
         @password = options[:password]
-        @channel = Channel.new(options[:channel]) if options[:channel]
+        @channel = Twitch::Chat::Channel.new(options[:channel]) if options[:channel]
 
         @messages_queue = []
 
@@ -131,7 +131,7 @@ module Twitch
         data.split(/\r?\n/).each do |message|
           @logger.debug(message)
 
-          Message.new(message).tap do |message|
+          Twitch::Chat::Message.new(message).tap do |message|
             trigger(:raw, message)
 
             case message.type
