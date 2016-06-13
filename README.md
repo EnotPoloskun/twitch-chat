@@ -21,7 +21,7 @@ Or install it yourself as:
 ## Usage
 
 ```ruby
-require 'twitch-chat'
+require 'twitch/chat'
 
 client = Twitch::Chat::Client.new(channel: 'channel', nickname: 'nickname', password: 'twitch_oath_token') do
   on(:connect) do

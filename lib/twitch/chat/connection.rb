@@ -1,7 +1,7 @@
 module Twitch
   module Chat
     class Connection < EventMachine::Connection
-      extend Forwardable
+      extend ::Forwardable
 
       def_delegators :@client, :receive_data, :unbind
 
