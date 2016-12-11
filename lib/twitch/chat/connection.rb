@@ -1,3 +1,4 @@
+require "forwardable"
 module Twitch
   module Chat
     class Connection < EventMachine::Connection
