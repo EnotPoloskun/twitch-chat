@@ -24,7 +24,7 @@ Or install it yourself as:
 require 'twitch/chat'
 
 client = Twitch::Chat::Client.new(channel: 'channel', nickname: 'nickname', password: 'twitch_oath_token') do
-  on(:connect) do
+  on(:connected) do
     send_message 'Hi guys!'
   end
 
