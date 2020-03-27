@@ -1,3 +1,12 @@
+# frozen_string_literal: true
+
+Thread.abort_on_exception = true
+
+require 'logger'
+
+require_relative 'message'
+require_relative 'channel'
+
 module Twitch
   module Chat
     class Client
@@ -5,77 +14,56 @@ module Twitch
       USER_MESSAGES_COUNT = 20
       TWITCH_PERIOD = 30.0
 
-      attr_accessor :host, :port, :nickname, :password, :connection
-      attr_reader :channel, :callbacks
+      def initialize(
+        nickname:, password:, channel: nil,
+        host: 'irc.chat.twitch.tv', port: '6667', output: STDOUT,
+        &block
+      )
+        @logger = Logger.new(output) if output
 
-      def initialize(options = {}, &blk)
-        options.symbolize_keys!
-        options = {
-          host: 'irc.twitch.tv',
-          port: '6667',
-          output: STDOUT
-        }.merge!(options)
-
-        @logger = Logger.new(options[:output]) if options[:output]
-
-        @host = options[:host]
-        @port = options[:port]
-        @nickname = options[:nickname]
-        @password = options[:password]
-        @channel = Twitch::Chat::Channel.new(options[:channel]) if options[:channel]
+        @host = host
+        @port = port
+        @nickname = nickname
+        @password = password
+        @channel = Channel.new(channel) if channel
 
         @messages_queue = []
 
-        @connected = false
+        @running = false
         @callbacks = {}
 
-        check_attributes!
+        execute_initialize_block block if block
 
-        if block_given?
-          if blk.arity == 1
-            yield self
-          else
-            instance_eval(&blk)
-          end
-        end
-
-        self.on(:new_moderator) do |user|
-          @channel.add_moderator(user)
-        end
-
-        self.on(:remove_moderator) do |user|
-          @channel.remove_moderator(user)
-        end
-
-        self.on(:ping) do
-          send_data("PONG :tmi.twitch.tv")
-        end
+        define_default_callbacks!
       end
 
-      def connect
-        @connection ||= EventMachine::connect(@host, @port, Connection, self)
-      end
-
-      def connected?
-        @connected
-      end
-
-      def on(callback, &blk)
-        (@callbacks[callback.to_sym] ||= []) << blk
+      def on(callback, &block)
+        (@callbacks[callback.to_sym] ||= []) << block
       end
 
       def trigger(event_name, *args)
-        (@callbacks[event_name.to_sym] || []).each { |blk| blk.call(*args) }
+        (@callbacks[event_name.to_sym] || []).each { |block| block.call(*args) }
       end
 
       def run!
-        EM.epoll
-        EventMachine.run do
-          trap("TERM") { EM::stop }
-          trap("INT")  { EM::stop }
-          handle_message_queue
-          connect
+        raise 'Already running' if @running
+
+        @running = true
+
+        %w[TERM INT].each do |signal|
+          trap signal do
+            ## `log writing failed. can't be called from trap context`
+            stop logging: false
+            raise SignalException, signal
+          end
         end
+
+        connect
+
+        @input_thread.join
+        @messages_thread.join
+
+        log :debug, 'Joined'
       end
 
       def join(channel)
@@ -83,8 +71,8 @@ module Twitch
         send_data "JOIN ##{@channel.name}"
       end
 
-      def part
-        send_data "PART ##{@channel.name}"
+      def part(logging: true)
+        send_data "PART ##{@channel.name}", logging: logging
         @channel = nil
         @messages_queue = []
       end
@@ -93,90 +81,177 @@ module Twitch
         @messages_queue << message if @messages_queue.last != message
       end
 
-      def ready
-        @connected = true
-        authenticate
-        join(@channel.name) if @channel
-
-        trigger(:connected)
-      end
-
       def max_messages_count
-        @channel.moderators.include?(@nickname) ? MODERATOR_MESSAGES_COUNT : USER_MESSAGES_COUNT
+        if @channel&.moderators&.include?(@nickname)
+          MODERATOR_MESSAGES_COUNT
+        else
+          USER_MESSAGES_COUNT
+        end
       end
 
       def message_delay
         TWITCH_PERIOD / max_messages_count
       end
 
-    private
-
-      def handle_message_queue
-        EM.add_timer(message_delay) do
-          if message = @messages_queue.pop
-            send_data "PRIVMSG ##{@channel.name} :#{message}"
-            @logger.debug("Sent message: PRIVMSG ##{@channel.name} :#{message}")
-          end
-
-          handle_message_queue
-        end
+      def stop(logging: true)
+        trigger :stop
+        @running = false
+        part logging: logging if @channel
       end
 
-      def unbind(arg = nil)
-        part if @channel
-        trigger(:disconnect)
-      end
+      def handle_input_data
+        @input_thread = Thread.start do
+          while @running
+            if @reconnecting
+              sleep 1
+              next
+            end
 
-      def receive_data(data)
-        data.split(/\r?\n/).each do |message|
-          @logger.debug(message)
+            line = reconnect_on_fail do
+              @socket.gets&.chomp
+            end
 
-          Twitch::Chat::Message.new(message).tap do |message|
-            trigger(:raw, message)
+            next unless line
 
-            case message.type
+            log :info, "> #{line}"
+
+            Twitch::Chat::Message.new(line).tap do |message|
+              trigger(:raw, message)
+
+              case message.type
+              when :authenticated
+                join @channel.name if @channel
+                trigger :authenticated
+              when :join
+                trigger :join, message.channel
               when :ping
-                trigger(:ping)
+                trigger :ping, message.params.last
               when :message
-                trigger(:message, message.user, message.message) if message.target == @channel.name
+                trigger :message, message
               when :mode
-                trigger(:mode, *message.params.last(2))
+                trigger :mode, *message.params.last(2)
 
                 if message.params[1] == '+o'
-                  trigger(:new_moderator, message.params.last)
+                  trigger :new_moderator, message.params.last
                 elsif message.params[1] == '-o'
-                  trigger(:remove_moderator, message.params.last)
+                  trigger :remove_moderator, message.params.last
                 end
-              when :slow_mode, :r9k_mode, :subscribers_mode, :slow_mode_off, :r9k_mode_off, :subscribers_mode_off
-                trigger(message.type)
+              when :slow_mode, :r9k_mode, :subscribers_mode, :slow_mode_off,
+                   :r9k_mode_off, :subscribers_mode_off
+                trigger message.type
               when :subscribe
-                trigger(:subscribe, message.params.last.split(' ').first)
+                trigger :subscribe, message.params.last.split(' ').first
               when :not_supported
-                trigger(:not_supported, *message.params)
+                trigger :not_supported, *message.params
+              end
             end
           end
+          log :debug, 'End of input thread'
+          @socket.close
         end
       end
 
-      def send_data(message)
-        return false unless connected?
+      private
 
-        message = message + "\n"
-        connection.send_data(message)
+      def connect
+        initialize_socket
+
+        handle_input_data
+
+        handle_messages_queue
+
+        request_additional_info
+
+        authenticate
       end
 
-      def check_attributes!
-        [:host, :port, :nickname, :password].each do |attribute|
-          raise ArgumentError.new("#{attribute.capitalize} is not defined") if send(attribute).nil?
+      def initialize_socket
+        @socket = TCPSocket.new(@host, @port)
+        @socket.set_encoding 'UTF-8'
+      end
+
+      def request_additional_info
+        send_data <<~DATA
+          CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership
+        DATA
+      end
+
+      def reconnect_on_fail(&block)
+        block.call
+      rescue Errno::ETIMEDOUT, Errno::EPIPE, Errno::ECONNRESET, IOError
+        @reconnecting = true
+
+        @socket.close
+
+        sleep 3
+
+        initialize_socket
+
+        @reconnecting = false
+
+        request_additional_info
+
+        authenticate
+
+        send __method__, &block
+      end
+
+      def handle_messages_queue
+        @messages_thread = Thread.start do
+          while @running
+            sleep message_delay
+
+            if (message = @messages_queue.pop)
+              send_data "PRIVMSG ##{@channel.name} :#{message}"
+            end
+          end
+
+          log :debug, 'End of messages thread'
+        end
+      end
+
+      def send_data(data, logging: true)
+        if logging
+          log_data = data.gsub(/(PASS oauth:)(\w+)/) do
+            "#{Regexp.last_match(1)}#{'*' * Regexp.last_match(2).size}"
+          end
+          log :info, "< #{log_data}"
         end
 
-        nil
+        reconnect_on_fail do
+          @socket.puts(data)
+        end
+      end
+
+      def execute_initialize_block(block)
+        if block.arity.zero?
+          instance_exec(&block)
+        else
+          block.call self
+        end
+      end
+
+      def define_default_callbacks!
+        on :new_moderator do |user|
+          @channel.add_moderator(user)
+        end
+
+        on :remove_moderator do |user|
+          @channel.remove_moderator(user)
+        end
+
+        on :ping do |host|
+          send_data "PONG :#{host}"
+        end
       end
 
       def authenticate
-        send_data "PASS #{password}"
-        send_data "NICK #{nickname}"
-        send_data "TWITCHCLIENT 3"
+        send_data "PASS #{@password}"
+        send_data "NICK #{@nickname}"
+      end
+
+      def log(level, message)
+        @logger&.public_send level, message
       end
     end
   end

@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 module Twitch
   module Chat
     class Channel
       attr_reader :name, :moderators
 
       def initialize(name)
-        @name = name
+        @name = name.downcase
         @moderators = []
       end
 
@@ -13,7 +15,7 @@ module Twitch
       end
 
       def remove_moderator(moderator)
-        @moderators.delete(moderator)
+        @moderators.delete moderator
       end
     end
   end
