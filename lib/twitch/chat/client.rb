@@ -4,6 +4,7 @@ Thread.abort_on_exception = true
 
 require 'logger'
 require 'socket'
+require 'timeout'
 
 require_relative 'message'
 require_relative 'channel'
@@ -110,7 +111,16 @@ module Twitch
             end
 
             line = reconnect_on_fail do
-              @socket.gets&.chomp
+              ## Twitch sends `PING` command every 5 minutes:
+              ## https://dev.twitch.tv/docs/irc/guide
+              ## If there is no any input, including this,
+              ## there is connection drop and we should reconnect,
+              ## because this method can hang 15+ minutes
+              ## and without `PONG` response Twitch just disconnect us,
+              ## but we don't receive errors, just silence.
+              Timeout.timeout(5 * 60) do
+                @socket.gets&.chomp
+              end
             end
 
             next unless line
@@ -182,7 +192,9 @@ module Twitch
 
       def reconnect_on_fail(&block)
         block.call
-      rescue Errno::ETIMEDOUT, Errno::EPIPE, Errno::ECONNRESET, IOError => e
+      rescue Errno::ETIMEDOUT, Errno::EPIPE, Errno::ECONNRESET, IOError,
+             Timeout::Error => e
+
         log :error, e.message
 
         @reconnecting = true
