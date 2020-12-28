@@ -103,6 +103,7 @@ module Twitch
         @input_thread = Thread.start do
           while @running
             if @reconnecting
+              log :debug, 'Sleep instead of getting messages while reconnecting'
               sleep 1
               next
             end
@@ -166,6 +167,8 @@ module Twitch
       end
 
       def initialize_socket
+        log :debug, 'Initializing new socket...'
+
         @socket = TCPSocket.new(@host, @port)
         @socket.set_encoding 'UTF-8'
       end
@@ -178,7 +181,9 @@ module Twitch
 
       def reconnect_on_fail(&block)
         block.call
-      rescue Errno::ETIMEDOUT, Errno::EPIPE, Errno::ECONNRESET, IOError
+      rescue Errno::ETIMEDOUT, Errno::EPIPE, Errno::ECONNRESET, IOError => e
+        log :error, e.message
+
         @reconnecting = true
 
         @socket.close
