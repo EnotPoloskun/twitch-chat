@@ -3,6 +3,7 @@
 Thread.abort_on_exception = true
 
 require 'logger'
+require 'socket'
 
 require_relative 'message'
 require_relative 'channel'
