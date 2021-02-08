@@ -18,10 +18,10 @@ module Twitch
 
       def initialize(
         nickname:, password:, channel: nil,
-        host: 'irc.chat.twitch.tv', port: '6667', output: STDOUT,
+        host: 'irc.chat.twitch.tv', port: '6667', logger: Logger.new(STDOUT),
         &block
       )
-        @logger = Logger.new(output) if output
+        @logger = logger
 
         @host = host
         @port = port
