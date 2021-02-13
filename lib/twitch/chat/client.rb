@@ -137,7 +137,7 @@ module Twitch
               when :join
                 trigger :join, message.channel
               when :ping
-                trigger :ping, message.params.last
+                send_data "PONG :#{message.params.last}"
               when :message
                 trigger :message, message
               when :mode
@@ -262,10 +262,6 @@ module Twitch
 
         on :remove_moderator do |user|
           @channel.remove_moderator(user)
-        end
-
-        on :ping do |host|
-          send_data "PONG :#{host}"
         end
       end
 
