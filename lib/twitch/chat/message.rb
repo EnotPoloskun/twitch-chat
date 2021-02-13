@@ -114,7 +114,9 @@ module Twitch
         # You are in a maze
         '372' => :authenticated,
         # 'End of /NAMES list'
-        '366' => :join
+        '366' => :join,
+        # https://dev.twitch.tv/docs/irc/commands#reconnect-twitch-commands
+        'RECONNECT' => :reconnect
       ).freeze
 
       private_constant :TYPES

@@ -153,6 +153,8 @@ module Twitch
                 trigger message.type
               when :subscribe
                 trigger :subscribe, message.params.last.split(' ').first
+              when :reconnect
+                reconnect
               when :not_supported
                 trigger :not_supported, *message.params
               end
@@ -197,6 +199,12 @@ module Twitch
 
         log :error, e.message
 
+        reconnect
+
+        send __method__, &block
+      end
+
+      def reconnect
         @reconnecting = true
 
         @socket.close
@@ -210,8 +218,6 @@ module Twitch
         request_additional_info
 
         authenticate
-
-        send __method__, &block
       end
 
       def handle_messages_queue
