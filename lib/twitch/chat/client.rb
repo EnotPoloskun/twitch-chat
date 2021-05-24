@@ -195,7 +195,7 @@ module Twitch
       def reconnect_on_fail(&block)
         block.call
       rescue Errno::ETIMEDOUT, Errno::EPIPE, Errno::ECONNRESET, IOError,
-             Timeout::Error => e
+             Timeout::Error, SocketError => e
 
         log :error, e.message
 
