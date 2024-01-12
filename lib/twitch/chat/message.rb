@@ -4,6 +4,7 @@ require_relative 'user'
 
 module Twitch
   module Chat
+    ## Data class for a single message in a chat
     class Message
       attr_reader(
         :type, :params, :command, :id, :sent_at, :channel, :text, :user,
@@ -62,10 +63,10 @@ module Twitch
 
         params = []
         if (match = raw_params.match(/(?:^:| :)(.*)$/))
-          params = match.pre_match.split(' ')
+          params = match.pre_match.split
           params << match[1]
         else
-          params = raw_params.split(' ')
+          params = raw_params.split
         end
 
         params
@@ -167,9 +168,7 @@ module Twitch
         value = @additional_info[key]
         return unless value
 
-        if value == off_value then :"#{name}_off"
-        else name
-        end
+        value == off_value ? :"#{name}_off" : name
       end
 
       def parse_notice_type
