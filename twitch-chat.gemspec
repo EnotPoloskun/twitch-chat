@@ -22,6 +22,10 @@ Gem::Specification.new do |spec|
   spec.homepage      = 'https://github.com/EnotPoloskun/twitch-chat'
   spec.license       = 'MIT'
 
+  spec.metadata = {
+    'rubygems_mfa_required' => 'true'
+  }
+
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
