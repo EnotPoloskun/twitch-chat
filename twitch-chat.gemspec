@@ -7,27 +7,28 @@ Gem::Specification.new do |spec|
   spec.version       = Twitch::Chat::VERSION
   spec.authors       = ['Pavel Astraukh']
   spec.email         = ['paladin111333@gmail.com']
+
   spec.summary       = <<~SUMMARY
     twitch-chat is a Twitch chat client that uses Twitch IRC. Can be used as twitch chat bot engine.
   SUMMARY
+
   spec.description = <<~DESC
     twitch-chat library is a Twitch chat client that uses Twitch IRC.
     `TCPSocket` is used to handle connections to servers.
     With the help of this library you can connect to any Twitch's channel and handle various chat events.
     Can be used as twitch chat bot engine.
   DESC
+
   spec.homepage      = 'https://github.com/EnotPoloskun/twitch-chat'
   spec.license       = 'MIT'
 
+  spec.metadata = {
+    'rubygems_mfa_required' => 'true'
+  }
+
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ['lib']
 
-  spec.add_development_dependency 'bundler', '~> 2.0'
-  spec.add_development_dependency 'pry-byebug', '~> 3.0'
-  spec.add_development_dependency 'rake', '~> 13.0'
-  spec.add_development_dependency 'rspec', '~> 3.0'
-  spec.add_development_dependency 'rubocop', '~> 0.80.0'
-  spec.add_development_dependency 'simplecov', '~> 0.18.0'
+  spec.required_ruby_version = '>= 2.3', '< 4'
 end

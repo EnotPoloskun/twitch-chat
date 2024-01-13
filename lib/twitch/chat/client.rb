@@ -11,6 +11,7 @@ require_relative 'channel'
 
 module Twitch
   module Chat
+    ## Base class of chat client, for external usage
     class Client
       MODERATOR_MESSAGES_COUNT = 100
       USER_MESSAGES_COUNT = 20
@@ -18,7 +19,7 @@ module Twitch
 
       def initialize(
         nickname:, password:, channel: nil,
-        host: 'irc.chat.twitch.tv', port: '6667', logger: Logger.new(STDOUT),
+        host: 'irc.chat.twitch.tv', port: '6667', logger: Logger.new($stdout),
         &block
       )
         @logger = logger
@@ -52,13 +53,7 @@ module Twitch
 
         @running = true
 
-        %w[TERM INT].each do |signal|
-          trap signal do
-            ## `log writing failed. can't be called from trap context`
-            stop logging: false
-            raise SignalException, signal
-          end
-        end
+        setup_signal_traps!
 
         connect
 
@@ -152,7 +147,7 @@ module Twitch
                    :r9k_mode_off, :subscribers_mode_off
                 trigger message.type
               when :subscribe
-                trigger :subscribe, message.params.last.split(' ').first
+                trigger :subscribe, message.params.last.split.first
               when :reconnect
                 reconnect
               when :not_supported
@@ -166,6 +161,16 @@ module Twitch
       end
 
       private
+
+      def setup_signal_traps!
+        %w[TERM INT].each do |signal|
+          trap signal do
+            ## `log writing failed. can't be called from trap context`
+            stop logging: false
+            raise SignalException, signal
+          end
+        end
+      end
 
       def connect
         initialize_socket

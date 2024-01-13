@@ -2,6 +2,7 @@
 
 module Twitch
   module Chat
+    ## Data class for a chat channel
     class Channel
       attr_reader :name, :moderators
 

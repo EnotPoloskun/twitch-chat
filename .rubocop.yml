@@ -1,5 +1,16 @@
+require:
+  - rubocop-rake
+  - rubocop-rspec
+
+inherit_from: .rubocop_todo.yml
+
 AllCops:
   TargetRubyVersion: 2.3
+  NewCops: enable
+  Exclude:
+    <% `git status --ignored --porcelain`.lines.grep(/^!! /).each do |path| %>
+      - <%= path.sub(/^!! /, '') %>
+    <% end %>
 
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented
@@ -14,3 +25,9 @@ Style/HashTransformValues:
 Metrics/BlockLength:
   Exclude:
     - spec/**/*
+
+RSpec/NestedGroups:
+  Enabled: false
+## https://github.com/rubocop-hq/rubocop-rspec/pull/863/files#r471603667
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false

@@ -1,19 +1,19 @@
 # frozen_string_literal: true
 
 describe Twitch::Chat::Client do
-  let(:client) do
-    Twitch::Chat::Client.new(password: 'password', nickname: 'enotpoloskun')
+  subject(:client) do
+    described_class.new(password: 'password', nickname: 'enotpoloskun')
   end
 
   describe '#on' do
-    context 'There is one message callback' do
+    context 'with one message callback' do
       subject { client.instance_variable_get(:@callbacks)[:message].count }
 
       before { client.on(:message) { 'callback1' } }
 
       it { is_expected.to eq 1 }
 
-      context 'There is another message callback' do
+      context 'with another message callback' do
         before { client.on(:message) { 'callback2' } }
 
         it { is_expected.to eq 2 }
@@ -22,24 +22,26 @@ describe Twitch::Chat::Client do
   end
 
   describe '#trigger' do
-    before { client.on(:message) { client.inspect } }
+    specify do
+      expect do |b|
+        client.on(:message, &b)
 
-    it { expect(client).to receive(:inspect) }
-
-    after { client.trigger(:message) }
+        client.trigger(:message)
+      end.to yield_control.once
+    end
   end
 
   describe 'reconnection' do
     let(:socket) { instance_double(TCPSocket) }
 
     before do
-      allow(client).to receive(:initialize_socket) do
-        client.instance_variable_set :@socket, socket
-      end
+      allow(socket).to receive(:set_encoding)
 
       allow(socket).to receive(:puts).with(a_string_starting_with('CAP REQ '))
       allow(socket).to receive(:puts).with(a_string_starting_with('PASS '))
       allow(socket).to receive(:puts).with(a_string_starting_with('NICK '))
+
+      allow(TCPSocket).to receive(:new).and_return socket
 
       ## 3 fails + 1 stop
       allow(socket).to receive(:close).exactly(3 + 1).times
