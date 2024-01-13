@@ -1,3 +1,7 @@
+require:
+  - rubocop-rake
+  - rubocop-rspec
+
 inherit_from: .rubocop_todo.yml
 
 AllCops:
@@ -21,3 +25,9 @@ Style/HashTransformValues:
 Metrics/BlockLength:
   Exclude:
     - spec/**/*
+
+RSpec/NestedGroups:
+  Enabled: false
+## https://github.com/rubocop-hq/rubocop-rspec/pull/863/files#r471603667
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
